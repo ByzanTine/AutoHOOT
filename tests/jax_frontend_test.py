@@ -104,3 +104,27 @@ def test_transpose():
 
     for outval, expect_outval in zip(outvals, expect_outvals):
         assert T.norm(outval - expect_outval) < 1e-6
+
+
+def test_cpd_res():
+    def testfunc(A, B, C):
+        T = np.einsum("ia,ja,ka->ijk", A, B, C)
+        return T,
+
+    size = 2
+    rank = 2
+    T.set_backend('jax')
+    A = T.random((size, rank))
+    B = T.random((size, rank))
+    C = T.random((size, rank))
+    inputs = [A, B, C]
+
+    out_nodes, variables = make_graph(testfunc, *inputs)
+    executor = ad.Executor(out_nodes)
+    feed_dict = dict(zip(variables, inputs))
+
+    outvals = executor.run(feed_dict=feed_dict)
+    expect_outvals = testfunc(*inputs)
+
+    for outval, expect_outval in zip(outvals, expect_outvals):
+        assert T.norm(outval - expect_outval) < 1e-6
